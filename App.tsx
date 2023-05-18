@@ -14,8 +14,18 @@ import Stripes from './src/assets/stripes.svg'
 import NlwLogo from './src/assets/nlw-spacetime-logo.svg'
 
 import { styled } from 'nativewind'
+import { makeRedirectUri, useAuthRequest } from 'expo-auth-session'
+import { useEffect } from 'react'
+import { api } from './src/lib/api'
 
 const StyledStripes = styled(Stripes)
+
+const discovery = {
+  authorizationEndpoint: 'https://github.com/login/oauth/authorize',
+  tokenEndpoint: 'https://github.com/login/oauth/access_token',
+  revocationEndpoint:
+    'https://github.com/settings/connections/applications/09c1b9994119a2e25c3b',
+}
 
 export default function App() {
   const [hasLoadFonts] = useFonts({
@@ -23,6 +33,37 @@ export default function App() {
     Roboto_700Bold,
     BaiJamjuree_700Bold,
   })
+
+  const [request, response, signWithGithub] = useAuthRequest(
+    {
+      clientId: '09c1b9994119a2e25c3b',
+      scopes: ['identity'],
+      redirectUri: makeRedirectUri({
+        scheme: 'nlwspacetime',
+      }),
+    },
+    discovery,
+  )
+
+  useEffect(() => {
+    console.log(makeRedirectUri({ scheme: 'nlwspacetime' }))
+
+    if (response?.type === 'success') {
+      const { code } = response.params
+
+      console.log(code)
+
+      api
+        .post('/register', {
+          code,
+        })
+        .then((response) => {
+          const { token } = response.data
+
+          console.log(token)
+        })
+    }
+  }, [response])
 
   if (!hasLoadFonts) {
     return null
@@ -51,6 +92,7 @@ export default function App() {
         <TouchableOpacity
           activeOpacity={0.7}
           className="rounded-full bg-green-500 px-5 py-2"
+          onPress={() => signWithGithub()}
         >
           <Text className="font-alt text-sm uppercase text-black">
             Cadastrar lembrança
